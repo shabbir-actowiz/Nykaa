@@ -8,26 +8,28 @@ def parse_product_links(url):
         page = 1
         new_url = url.replace("currentPage=1", "currentPage={}")
         print(f"Starting to fetch product links from: {url}")
+
         while True:
             changed_url = new_url.format(page)
-            response = requests.get(changed_url, impersonate="chrome")       
-            data = response.json()
-            
-            products = data.get("response", {}).get("products", [])
-            if response.status_code != 200 or data.get("status", "").lower() == "fail" or not products:
-                print(f"Failed to fetch page {page} or no products found. Stopping pagination.")
+            response = requests.get(changed_url, impersonate="chrome")      
+            if  response.status_code == 204:
+                print(response.status_code, f"No content found for page {page}. Stopping pagination.")
                 break
 
+            data = response.json()
+            if data.get("status", "").lower() == "fail" :
+                print(f"Failed to fetch page {page} or no products found. Stopping pagination.")
+                break
+            products = data.get("response", {}).get("products", [])
             links.extend(extract_links(products))
             page += 1
-            
-        return links    
+
 
     except Exception as e:
         print(f"An error occurred: {e}")
         return links
 
-
+    return links 
 def extract_links(products):   
     links = []
 

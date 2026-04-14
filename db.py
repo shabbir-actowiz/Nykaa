@@ -11,6 +11,7 @@ DB_CONFIG = {
 DATABASE = "NYKAA"
 LINK_LIMIT = 10
 PRODUCT_LINK_LIMIT = 50
+BATCH_SIZE = 1000 
 
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
@@ -96,18 +97,61 @@ def get_pending_category_links():
     cursor.close()
     return rows
 
-def insert_product_links(category_id: int, product_links: list[str]):
+def insert_product_links(category_id, product_links):
+    print('*' * 50)
+    print(f"Inserting product links for category {category_id}: {len(product_links)} links")
+    if has_products_for_category(category_id):
+        print(f"Products already exist for category {category_id}. Skipping.")
+        return
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            for idx, link in enumerate(product_links[:PRODUCT_LINK_LIMIT]):
-                cursor.execute(
+
+            data_batch = []
+
+            for idx, link in enumerate(product_links):
+                data_batch.append((category_id, link, idx + 1))
+
+                if len(data_batch) == BATCH_SIZE:
+                    cursor.executemany(
+                        "INSERT INTO product_links (category_source_id, product_url, page_number) VALUES (%s, %s, %s)",
+                        data_batch
+                    )
+                    data_batch.clear()  
+
+            
+            if data_batch:
+                cursor.executemany(
                     "INSERT INTO product_links (category_source_id, product_url, page_number) VALUES (%s, %s, %s)",
-                    (category_id, link, idx + 1)
+                    data_batch
                 )
-            conn.commit()
+
+        conn.commit()
 
 def create_schema():
     create_database()
     create_tables()
+
+
+def has_categories():
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM category_nodes")
+            count = cursor.fetchone()[0]
+            return count > 0
+
+
+def has_products_for_category(category_id):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM product_links WHERE category_source_id = %s", (category_id,))
+            count = cursor.fetchone()[0]
+            return count > 0
+
+
+def update_category_status(sub_id, status):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE category_nodes SET status = %s WHERE sub_id = %s", (status, sub_id))
+        conn.commit()
 
 

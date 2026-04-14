@@ -174,8 +174,7 @@ def flatten_category_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return flattened
 
 
-def parse_category_file(file_path: str | Path) -> dict[str, list[dict[str, Any]]]:
-    payload=load_json(file_path)
+def parse_category_file(payload):
     tree=extract_category_tree(payload)
     flat=flatten_category_tree(tree)
     return {
