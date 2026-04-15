@@ -56,5 +56,9 @@ if __name__ == "__main__":
             print(f"Processing category ID {category_id} with API URL: {api_url}")
             print('-' * 50)
             product_links=parse_product_links(api_url)
-            insert_product_links(category_id, product_links)
-            update_category_status(category_id, 'done')
+            if product_links:
+                insert_product_links(category_id, product_links)
+                update_category_status(category_id, 'done')
+            else:
+                print(f"No product links found for category ID {category_id}. Marking as failed.")
+                update_category_status(category_id, 'failed')
